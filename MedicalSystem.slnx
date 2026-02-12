@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="App/App.csproj" />
+  <Project Path="Core/Core.csproj" />
+  <Project Path="ORM/ORM.csproj" />
+</Solution>
