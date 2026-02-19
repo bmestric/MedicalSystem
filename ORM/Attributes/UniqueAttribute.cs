@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ORM.Attributes
 {
-    [AttributeUsage(AttributeTargets.Property, AllowMultiple = false)]
+    [AttributeUsage(AttributeTargets.Property)]
     public class UniqueAttribute : Attribute
     {
     }

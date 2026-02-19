@@ -11,7 +11,9 @@ namespace ORM.Attributes
     {
         public string? Name { get; set; }
         public string? TypeName { get; set; }
-        public int Length { get; set; }
+        public int Length { get; set; } = -1;
+        public int Precision { get; set; } = -1;
+        public int Scale { get; set; } = -1;
 
         public ColumnAttribute()
         {
