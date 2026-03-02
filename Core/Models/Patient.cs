@@ -1,11 +1,4 @@
 ﻿using Core.Enums;
-using System;
-using System.Collections.Generic;
-//using System.ComponentModel.DataAnnotations;
-//using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using ORM.Attributes;
 
 namespace Core.Models
@@ -13,29 +6,34 @@ namespace Core.Models
     [Table("patient")]
     public class Patient
     {
-        [PrimaryKey]
+        [PrimaryKey(autoIncrement: true)]
         [Column("id")]
         public int Id { get; set; }
 
         [Column("first_name")]
-        public string FirstName { get; set; }
+        [NotNull]
+        public string FirstName { get; set; } = null!;
 
         [Column("last_name")]
-        public string LastName { get; set; }
+        [NotNull]
+        public string LastName { get; set; } = null!;
 
         [Column("oib")]
-        public string Oib { get; set; }
+        [NotNull]
+        [Unique]
+        public string Oib { get; set; } = null!;
 
         [Column("date_of_birth")]
         public DateOnly DateOfBirth { get; set; }
 
-        [Column("Gender")]
+        [Column("gender")]
         public Gender Gender { get; set; }
 
         [Column("residence_address")]
-        public string ResidenceAddress { get; set; }
+        public string ResidenceAddress { get; set; } = null!;
 
         [Column("permanent_address")]
-        public string PermanentAddress { get; set; }
+        public string PermanentAddress { get; set; } = null!;
+
     }
 }
