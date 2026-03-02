@@ -1,16 +1,15 @@
 ﻿using ORM.Attributes;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ORM.Mapping
 {
     public class EntityMapper
     {
-        private static readonly Dictionary<Type, EntityMetadata> _metadata = new();
+        private static readonly ConcurrentDictionary<Type, EntityMetadata> _metadata = new();
 
         public static EntityMetadata GetMetadata(Type entityType)
         {

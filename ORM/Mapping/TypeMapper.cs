@@ -10,6 +10,26 @@ namespace ORM.Mapping
     {
         private static readonly Dictionary<Type, string> _typeMap = new();
 
+        private static readonly Dictionary<string, string> _postgresTypeNormalization = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "integer", "INTEGER" },
+            { "bigint", "BIGINT" },
+            { "smallint", "SMALLINT" },
+            { "numeric", "DECIMAL" },
+            { "double precision", "DOUBLE PRECISION" },
+            { "real", "REAL" },
+            { "text", "TEXT" },
+            { "character varying", "VARCHAR" },
+            { "character", "CHAR" },
+            { "boolean", "BOOLEAN" },
+            { "date", "DATE" },
+            { "time without time zone", "TIME" },
+            { "timestamp without time zone", "TIMESTAMP WITHOUT TIME ZONE" },
+            { "timestamp with time zone", "TIMESTAMP WITH TIME ZONE" },
+            { "bytea", "BYTEA" },
+            { "uuid", "UUID" },
+        };
+
         static TypeMapper()
         {
             _typeMap[typeof(int)] = "INTEGER";
@@ -98,6 +118,13 @@ namespace ORM.Mapping
         public static Type GetUnderlyingType(Type type)
         {
             return Nullable.GetUnderlyingType(type) ?? type;
+        }
+
+        public static string NormalizePostgresType(string informationSchemaType)
+        {
+            if (_postgresTypeNormalization.TryGetValue(informationSchemaType, out var normalized))
+                return normalized;
+            return informationSchemaType.ToUpperInvariant();
         }
     }
 }
