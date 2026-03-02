@@ -3,8 +3,6 @@ using ORM.Mapping;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ORM.Querying
 {
@@ -22,25 +20,13 @@ namespace ORM.Querying
             var results = new List<T>();
             var metadata = EntityMapper.GetMetadata(typeof(T));
 
-            using (var connection = _context.GetConnection())
-            using (var command = new NpgsqlCommand(sql, connection))
+            var command = CreateCommand(sql, parameters);
+            using (var reader = command.ExecuteReader())
             {
-                // Add parameters if provided
-                if (parameters != null)
+                while (reader.Read())
                 {
-                    foreach (var param in parameters)
-                    {
-                        command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
-                    }
-                }
-
-                using (var reader = command.ExecuteReader())
-                {
-                    while (reader.Read())
-                    {
-                        var entity = MaterializeEntity<T>(reader, metadata);
-                        results.Add(entity);
-                    }
+                    var entity = MaterializeEntity<T>(reader, metadata);
+                    results.Add(entity);
                 }
             }
 
@@ -49,38 +35,43 @@ namespace ORM.Querying
 
         public object? ExecuteScalar(string sql, Dictionary<string, object>? parameters = null)
         {
-            using (var connection = _context.GetConnection())
-            using (var command = new NpgsqlCommand(sql, connection))
-            {
-                // Add parameters if provided
-                if (parameters != null)
-                {
-                    foreach (var param in parameters)
-                    {
-                        command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
-                    }
-                }
-
-                return command.ExecuteScalar();
-            }
+            var command = CreateCommand(sql, parameters);
+            return command.ExecuteScalar();
         }
 
         public int ExecuteNonQuery(string sql, Dictionary<string, object>? parameters = null)
         {
-            using (var connection = _context.GetConnection())
-            using (var command = new NpgsqlCommand(sql, connection))
-            {
-                // Add parameters if provided
-                if (parameters != null)
-                {
-                    foreach (var param in parameters)
-                    {
-                        command.Parameters.AddWithValue(param.Key, param.Value ?? DBNull.Value);
-                    }
-                }
+            var command = CreateCommand(sql, parameters);
+            return command.ExecuteNonQuery();
+        }
 
-                return command.ExecuteNonQuery();
+        private NpgsqlCommand CreateCommand(string sql, Dictionary<string, object>? parameters)
+        {
+            var connection = _context.GetConnection();
+            var command = new NpgsqlCommand(sql, connection);
+
+            if (_context.CurrentTransaction != null)
+            {
+                command.Transaction = _context.CurrentTransaction;
             }
+
+            if (parameters != null)
+            {
+                foreach (var param in parameters)
+                {
+                    var value = param.Value;
+
+                    // Npgsql doesn't know how to serialize CLR enums — convert to int
+                    if (value != null && value is not DBNull && value.GetType().IsEnum)
+                    {
+                        value = Convert.ToInt32(value);
+                    }
+
+                    command.Parameters.AddWithValue(param.Key, value ?? DBNull.Value);
+                }
+            }
+
+            return command;
         }
 
         private T MaterializeEntity<T>(NpgsqlDataReader reader, EntityMetadata metadata) where T : class, new()
@@ -98,7 +89,7 @@ namespace ORM.Querying
                     // Get column ordinal (position in result set)
                     var ordinal = reader.GetOrdinal(property.ColumnName);
 
-                    // Check for NULL
+                    
                     if (reader.IsDBNull(ordinal))
                     {
                         // Only set null if property is nullable
@@ -110,10 +101,10 @@ namespace ORM.Querying
                         continue;
                     }
 
-                    // Get value based on property type
+                    
                     var value = GetValueFromReader(reader, ordinal, property.PropertyType);
 
-                    // Set property value
+                    
                     var propertyInfo = metadata.EntityType.GetProperty(property.PropertyName);
                     propertyInfo?.SetValue(entity, value);
                 }

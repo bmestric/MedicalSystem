@@ -1,11 +1,12 @@
 ﻿using Npgsql;
 using ORM.Mapping;
+using ORM.Migrations;
+using ORM.Schema;
 using ORM.Tracking;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ORM.Querying
 {
@@ -14,6 +15,7 @@ namespace ORM.Querying
         private NpgsqlConnection? _connection;
         private NpgsqlTransaction? _transaction;
         private bool _disposed;
+        private readonly ConcurrentDictionary<Type, object> _dbSets = new();
 
         protected string ConnectionString { get; set; } = string.Empty;
 
@@ -23,11 +25,58 @@ namespace ORM.Querying
 
         protected abstract void OnConfiguring();
 
-        protected DatabaseContext()
+        protected DatabaseContext(string connectionString)
         {
+            ConnectionString = connectionString;
             OnConfiguring();
             QueryBuilder = new QueryBuilder();
             QueryExecutor = new QueryExecutor(this);
+        }
+
+        public void EnsureCreated(params Type[] entityTypes)
+        {
+            var generator = new SchemaGenerator();
+            var ddl = generator.GenerateSchema(entityTypes);
+
+            using var command = new NpgsqlCommand(ddl, GetConnection());
+            command.ExecuteNonQuery();
+        }
+
+        public Migration Migrate(string name, params Type[] entityTypes)
+        {
+            var connection = GetConnection();
+            var schemaReader = new DatabaseSchemaReader(connection);
+            var generator = new MigrationGenerator(schemaReader);
+            var runner = new MigrationRunner(connection);
+
+            runner.EnsureMigrationTable();
+            var migration = generator.GenerateMigration(name, entityTypes);
+            runner.MigrateUp(migration);
+
+            return migration;
+        }
+
+        public void Rollback()
+        {
+            var connection = GetConnection();
+            var runner = new MigrationRunner(connection);
+            runner.MigrateDown();
+        }
+
+        public void MigrationStatus()
+        {
+            var connection = GetConnection();
+            var runner = new MigrationRunner(connection);
+            runner.PrintStatus();
+        }
+
+        public Migration PreviewMigration(string name, params Type[] entityTypes)
+        {
+            var connection = GetConnection();
+            var schemaReader = new DatabaseSchemaReader(connection);
+            var generator = new MigrationGenerator(schemaReader);
+
+            return generator.GenerateMigration(name, entityTypes);
         }
 
         public NpgsqlConnection GetConnection()
@@ -107,7 +156,7 @@ namespace ORM.Querying
                     var metadata = EntityMapper.GetMetadata(entry.Entity.GetType());
                     var sql = QueryBuilder.BuildDelete(metadata);
 
-                    // Extract PK value
+                    
                     var pkProperty = metadata.PrimaryKey
                         ?? throw new InvalidOperationException($"Entity {entry.Entity.GetType().Name} has no primary key");
 
@@ -180,7 +229,7 @@ namespace ORM.Querying
             }
             catch
             {
-                if (!wasInTransaction)
+                if (!wasInTransaction && _transaction != null)
                 {
                     RollbackTransaction();
                 }
@@ -190,10 +239,9 @@ namespace ORM.Querying
             return changeCount;
         }
 
-
         protected DbSet<T> Set<T>() where T : class, new()
         {
-            return new DbSet<T>(this);
+            return (DbSet<T>)_dbSets.GetOrAdd(typeof(T), _ => new DbSet<T>(this));
         }
 
         public void Dispose()
