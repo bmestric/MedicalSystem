@@ -137,7 +137,7 @@ static void ListPatients(MedicalDbContext context)
     if (patients.Count == 0) { Console.WriteLine("No patients found.\n"); return; }
 
     foreach (var p in patients)
-        Console.WriteLine($"  [{p.Id}] {p.FirstName} {p.LastName} | OIB: {p.Oib} | DOB: {p.DateOfBirth} | Gender: {p.Gender}");
+        Console.WriteLine($"  [{p.Id}] {p.FirstName} {p.LastName} | OIB: {p.Oib} | DOB: {p.DateOfBirth:dd.MM.yyyy} | Gender: {p.Gender}");
     Console.WriteLine();
 }
 
@@ -147,7 +147,7 @@ static void CreatePatient(MedicalDbContext context)
     Console.Write("First name: "); patient.FirstName = Console.ReadLine()!;
     Console.Write("Last name: "); patient.LastName = Console.ReadLine()!;
     Console.Write("OIB: "); patient.Oib = Console.ReadLine()!;
-    Console.Write("Date of birth (yyyy-MM-dd): "); patient.DateOfBirth = DateOnly.Parse(Console.ReadLine()!);
+    Console.Write("Date of birth (dd.MM.yyyy): "); patient.DateOfBirth = DateOnly.ParseExact(Console.ReadLine()!, "dd.MM.yyyy");
     Console.Write($"Gender ({string.Join(", ", Enum.GetNames<Gender>())}): ");
     patient.Gender = Enum.Parse<Gender>(Console.ReadLine()!, true);
     Console.Write("Residence address: "); patient.ResidenceAddress = Console.ReadLine()!;
@@ -388,8 +388,8 @@ static void ListMedicalHistory(MedicalDbContext context)
     {
         var patientName = r.Patient != null ? $"{r.Patient.FirstName} {r.Patient.LastName}" : $"PatientID:{r.PatientId}";
         var diseaseName = r.Disease?.Name ?? $"DiseaseID:{r.DiseaseId}";
-        var end = r.EndDate.HasValue ? r.EndDate.Value.ToString() : "ongoing";
-        Console.WriteLine($"  [{r.Id}] {patientName} — {diseaseName} ({r.StartDate} to {end})");
+        var end = r.EndDate.HasValue ? r.EndDate.Value.ToString("dd.MM.yyyy") : "ongoing";
+        Console.WriteLine($"  [{r.Id}] {patientName} — {diseaseName} ({r.StartDate:dd.MM.yyyy} to {end})");
     }
     Console.WriteLine();
 }
@@ -404,12 +404,12 @@ static void CreateMedicalHistory(MedicalDbContext context)
     Console.Write("Disease ID: ");
     if (!int.TryParse(Console.ReadLine(), out var diseaseId)) return;
 
-    Console.Write("Start date (yyyy-MM-dd): ");
-    var startDate = DateOnly.Parse(Console.ReadLine()!);
+    Console.Write("Start date (dd.MM.yyyy): ");
+    var startDate = DateOnly.ParseExact(Console.ReadLine()!, "dd.MM.yyyy");
 
-    Console.Write("End date (yyyy-MM-dd, leave empty if ongoing): ");
+    Console.Write("End date (dd.MM.yyyy, leave empty if ongoing): ");
     var endInput = Console.ReadLine();
-    DateOnly? endDate = string.IsNullOrWhiteSpace(endInput) ? null : DateOnly.Parse(endInput);
+    DateOnly? endDate = string.IsNullOrWhiteSpace(endInput) ? null : DateOnly.ParseExact(endInput, "dd.MM.yyyy");
 
     var record = new MedicalHistory
     {
@@ -433,9 +433,9 @@ static void UpdateMedicalHistory(MedicalDbContext context)
     var record = context.MedicalHistories.FindById(id);
     if (record == null) { Console.WriteLine("Not found.\n"); return; }
 
-    Console.Write($"End date [{record.EndDate?.ToString() ?? "ongoing"}] (yyyy-MM-dd, leave empty to skip): ");
+    Console.Write($"End date [{record.EndDate?.ToString("dd.MM.yyyy") ?? "ongoing"}] (dd.MM.yyyy, leave empty to skip): ");
     var input = Console.ReadLine();
-    if (!string.IsNullOrWhiteSpace(input)) record.EndDate = DateOnly.Parse(input);
+    if (!string.IsNullOrWhiteSpace(input)) record.EndDate = DateOnly.ParseExact(input, "dd.MM.yyyy");
 
     context.SaveChanges();
     Console.WriteLine("Medical history updated.\n");
@@ -490,8 +490,8 @@ static void ListPrescriptions(MedicalDbContext context)
         var patientName = rx.Patient != null ? $"{rx.Patient.FirstName} {rx.Patient.LastName}" : $"PatientID:{rx.PatientId}";
         var medName = rx.Medication?.Name ?? $"MedID:{rx.MedicationId}";
         var doctorName = rx.Doctor != null ? $"Dr. {rx.Doctor.LastName}" : $"DoctorID:{rx.DoctorId}";
-        var end = rx.EndDate.HasValue ? rx.EndDate.Value.ToString() : "ongoing";
-        Console.WriteLine($"  [{rx.Id}] {patientName} — {medName} {rx.DoseAmount} {rx.DoseUnit} ({rx.Frequency}) by {doctorName} | {rx.StartDate} to {end}");
+        var end = rx.EndDate.HasValue ? rx.EndDate.Value.ToString("dd.MM.yyyy") : "ongoing";
+        Console.WriteLine($"  [{rx.Id}] {patientName} — {medName} {rx.DoseAmount} {rx.DoseUnit} ({rx.Frequency}) by {doctorName} | {rx.StartDate:dd.MM.yyyy} to {end}");
     }
     Console.WriteLine();
 }
@@ -519,12 +519,12 @@ static void CreatePrescription(MedicalDbContext context)
     Console.Write($"Frequency ({string.Join(", ", Enum.GetNames<FrequencyType>())}): ");
     var frequency = Enum.Parse<FrequencyType>(Console.ReadLine()!, true);
 
-    Console.Write("Start date (yyyy-MM-dd): ");
-    var startDate = DateOnly.Parse(Console.ReadLine()!);
+    Console.Write("Start date (dd.MM.yyyy): ");
+    var startDate = DateOnly.ParseExact(Console.ReadLine()!, "dd.MM.yyyy");
 
-    Console.Write("End date (yyyy-MM-dd, leave empty if ongoing): ");
+    Console.Write("End date (dd.MM.yyyy, leave empty if ongoing): ");
     var endInput = Console.ReadLine();
-    DateOnly? endDate = string.IsNullOrWhiteSpace(endInput) ? null : DateOnly.Parse(endInput);
+    DateOnly? endDate = string.IsNullOrWhiteSpace(endInput) ? null : DateOnly.ParseExact(endInput, "dd.MM.yyyy");
 
     var prescription = new Prescription
     {
@@ -564,9 +564,9 @@ static void UpdatePrescription(MedicalDbContext context)
     input = Console.ReadLine();
     if (!string.IsNullOrWhiteSpace(input)) rx.Frequency = Enum.Parse<FrequencyType>(input, true);
 
-    Console.Write($"End date [{rx.EndDate?.ToString() ?? "ongoing"}] (yyyy-MM-dd, leave empty to skip): ");
+    Console.Write($"End date [{rx.EndDate?.ToString("dd.MM.yyyy") ?? "ongoing"}] (dd.MM.yyyy, leave empty to skip): ");
     input = Console.ReadLine();
-    if (!string.IsNullOrWhiteSpace(input)) rx.EndDate = DateOnly.Parse(input);
+    if (!string.IsNullOrWhiteSpace(input)) rx.EndDate = DateOnly.ParseExact(input, "dd.MM.yyyy");
 
     context.SaveChanges();
     Console.WriteLine("Prescription updated.\n");
@@ -619,7 +619,7 @@ static void ListAppointments(MedicalDbContext context)
     {
         var patientName = a.Patient != null ? $"{a.Patient.FirstName} {a.Patient.LastName}" : $"PatientID:{a.PatientId}";
         var doctorName = a.Doctor != null ? $"Dr. {a.Doctor.LastName}" : $"DoctorID:{a.DoctorId}";
-        Console.WriteLine($"  [{a.Id}] {patientName} — {a.ExamType} with {doctorName} at {a.ScheduledAt:yyyy-MM-dd HH:mm} | Notes: {a.Notes ?? "N/A"}");
+        Console.WriteLine($"  [{a.Id}] {patientName} — {a.ExamType} with {doctorName} at {a.ScheduledAt:dd.MM.yyyy HH:mm} | Notes: {a.Notes ?? "N/A"}");
     }
     Console.WriteLine();
 }
@@ -637,8 +637,8 @@ static void CreateAppointment(MedicalDbContext context)
     Console.Write($"Exam type ({string.Join(", ", Enum.GetNames<ExamType>())}): ");
     var examType = Enum.Parse<ExamType>(Console.ReadLine()!, true);
 
-    Console.Write("Scheduled at (yyyy-MM-dd HH:mm): ");
-    var scheduledAt = DateTime.Parse(Console.ReadLine()!);
+    Console.Write("Scheduled at (dd.MM.yyyy HH:mm): ");
+    var scheduledAt = DateTime.ParseExact(Console.ReadLine()!, "dd.MM.yyyy HH:mm", null);
 
     Console.Write("Notes (optional): ");
     var notes = Console.ReadLine();
@@ -667,9 +667,9 @@ static void UpdateAppointment(MedicalDbContext context)
     var appt = context.Appointments.FindById(id);
     if (appt == null) { Console.WriteLine("Not found.\n"); return; }
 
-    Console.Write($"Scheduled at [{appt.ScheduledAt:yyyy-MM-dd HH:mm}] (leave empty to skip): ");
+    Console.Write($"Scheduled at [{appt.ScheduledAt:dd.MM.yyyy HH:mm}] (leave empty to skip): ");
     var input = Console.ReadLine();
-    if (!string.IsNullOrWhiteSpace(input)) appt.ScheduledAt = DateTime.Parse(input);
+    if (!string.IsNullOrWhiteSpace(input)) appt.ScheduledAt = DateTime.ParseExact(input, "dd.MM.yyyy HH:mm", null);
 
     Console.Write($"Notes [{appt.Notes ?? ""}]: ");
     input = Console.ReadLine();
