@@ -1,10 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore.ChangeTracking;
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ORM.Tracking
 {
@@ -24,13 +21,16 @@ namespace ORM.Tracking
                 {
                     Entity = entity,
                     State = state,
-                    OriginalValues = state == EntityState.Unchanged || state == EntityState.Modified ? CreateSnapshot(entity) : null
+                    OriginalValues = state == EntityState.Unchanged || state == EntityState.Modified
+                        ? CreateSnapshot(entity)
+                        : null
                 };
                 _trackedEntities[entity] = newEntry;
             }
         }
 
-        public EntityState GetState(object entity) => _trackedEntities.TryGetValue(entity, out var entry) ? entry.State : EntityState.Detached;
+        public EntityState GetState(object entity) =>
+            _trackedEntities.TryGetValue(entity, out var entry) ? entry.State : EntityState.Detached;
 
         public IEnumerable<EntityEntry> GetEntries(EntityState? state = null)
         {
@@ -54,6 +54,8 @@ namespace ORM.Tracking
 
         public void AcceptAllChanges()
         {
+            var toRemove = new List<object>();
+
             foreach (var entry in _trackedEntities.Values)
             {
                 if (entry.State == EntityState.Added || entry.State == EntityState.Modified)
@@ -63,8 +65,13 @@ namespace ORM.Tracking
                 }
                 else if (entry.State == EntityState.Deleted)
                 {
-                    _trackedEntities.TryRemove(entry.Entity, out _);
+                    toRemove.Add(entry.Entity);
                 }
+            }
+
+            foreach (var key in toRemove)
+            {
+                _trackedEntities.TryRemove(key, out _);
             }
         }
 
@@ -102,6 +109,5 @@ namespace ORM.Tracking
 
             return false;
         }
-
     }
 }
